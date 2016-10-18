@@ -1,0 +1,242 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=gb2312">
+    <title>Offline Maps Demo - by lyklinse</title>
+    <script type="text/javascript" src="mapfiles/mapapi.js"></script>
+    <script type="text/javascript" src="js/jquery-1.8.0.min.js"></script>
+   <!-- 绘制线，图js-->
+    <script type="text/javascript" src="mapfiles/api-3/16/2/drawing.js"></script>
+    <script type="text/javascript" src="mapfiles/api-3/16/2/drawing_impl.js"></script>
+    <script>
+        //绘图样式;
+        var style = {
+            fillColor: "#FFB5B5",
+            strokeColor: " 	#FF0000",
+            strokeWeight: 3,
+            strokeOpacity: 0.8,
+            fillOpacity: 0.2
+        };;
+
+        var map;
+
+
+        function LocalMapType() {}
+
+        LocalMapType.prototype.tileSize = new google.maps.Size(256, 256);//每个元素的大小，宽高像素
+        LocalMapType.prototype.maxZoom = 19;   //地图显示最大级别
+        LocalMapType.prototype.minZoom = 3;    //地图显示最小级别
+        LocalMapType.prototype.getTile = function(coord, zoom, ownerDocument) {
+
+            var img = ownerDocument.createElement("img");//当前元素创建img元素
+            img.style.width = this.tileSize.width + "px";
+            img.style.height = this.tileSize.height + "px";
+            mapPicDir = "maptile/googlemaps/roadmap/";
+            var curSize = Math.pow(2,zoom);
+            $("#zoom").html(map.getZoom())
+            strURL = mapPicDir + zoom + "/" + (coord.x % curSize )+ "-" + (coord.y % curSize)+ ".jpg";
+            strLoad=mapPicDir + zoom + "-road/" + (coord.x % curSize )+ "-" + (coord.y % curSize)+ ".png";
+            img.src = strLoad;
+
+           // alert((strLoad))
+            img.style.background.url=strURL;
+           // $(img).style({"background:url":"strURL"});
+            $(img).attr({"style":"background: url("+strURL+")"})//加背景图
+            img.onerror=function(){
+                img.src="images/noimg.jpg"
+            }
+            return img;
+        };
+
+        var localMapType = new LocalMapType();//加载元素
+
+        //加载地图，地图设置
+        function initialize() {
+
+            var myLatlng = new google.maps.LatLng(19.2260742187501, 109.8193359375);//中心座标
+            var mapOptions = {
+                zoom: 13,//默认显示级别
+                center: myLatlng,
+            }
+
+
+            map = new google.maps.Map(document.getElementById('map_canvas'), mapOptions);//创建地图，把地图放在div
+            map.mapTypes.set('localMap', localMapType);   //绑定本地地图类型
+            map.setMapTypeId('localMap');    //指定显示本地地图
+            map.setOptions({draggable: true});
+
+            // 鼠标事件监听器,显示经纬度
+            google.maps.event.addListener(map, 'mousemove', function (event) {
+                center = event.latLng;
+                centerlat = center.lat();
+                centerlng = center.lng();
+                // alert(center.lng())
+                $("#lanlng").html(center.lat() + "," + center.lng())
+                //  document.getElementById("message").innerHTML = center.toString();
+            });
+
+
+            // selectColor();
+          var  infowindow = new google.maps.InfoWindow();//创建一个提示框，变量必须全局变量，否则函数无法使用
+
+            //绘画、线初始化，初始化后左上角现在绘画方式自己出来
+            var drawingManager = new google.maps.drawing.DrawingManager({
+                drawingControl: true,
+                drawingControlOptions: {
+                    position: google.maps.ControlPosition.TOP_LEFT,
+                    drawingModes: [
+                        google.maps.drawing.OverlayType.MARKER,
+                        google.maps.drawing.OverlayType.CIRCLE,
+                        google.maps.drawing.OverlayType.POLYGON,
+                        google.maps.drawing.OverlayType.POLYLINE,
+                        google.maps.drawing.OverlayType.RECTANGLE
+                    ]
+                },
+                //设置图形显示样式
+                circleOptions: style,
+                //多边形
+                polygonOptions: style,
+                //矩形
+                rectangleOptions: style,
+                //线
+                polylineOptions: style
+            });
+            drawingManager.setMap(map);
+            //注册 多边形 绘制完成事件
+            google.maps.event.addListener(drawingManager, 'polygoncomplete', function (polygon) {
+                // alert("sdsds")
+                var array = polygon.getPath().getArray();
+            });
+
+
+            var marker
+            //这个事件触发,当用户完成一个标记
+            google.maps.event.addListener(drawingManager, 'markercomplete', function (event) {
+               // alert("这个事件触发,当用户完成一个标记")
+               // alert(event.position)
+                //点击标记
+               // addListenerOnce这个是只能点击一次
+                google.maps.event.addListener(event,"click",function(){
+                   if (infowindow) {infowindow.close()};
+                   // alert("你点击了标记")
+                   // alert(event.position);
+                   // event.setMap(null)//删除当前标记
+                    infowindow.setContent('测试点击标记!!!!!!'+event.position);//设置提示框内容
+                    infowindow.setPosition(event.position);//定位
+                    infowindow.open(map);//地图上展现
+
+                });
+
+                google.maps.event.addListener(event,"rightclick",function(){
+                   alert("右键事件")
+
+                });
+
+            });
+
+            //这个事件触发,当用户完成绘制折线
+            google.maps.event.addListener(drawingManager, 'polylinecomplete', function (event) {
+                alert("这个事件触发,当用户完成绘制折线")
+
+                google.maps.event.addListener(event,"rightclick",function(){
+                    alert("右键事件")
+
+                });
+
+            });
+
+            //这个事件触发,当用户完成画一个圆
+            google.maps.event.addListener(drawingManager, 'circlecomplete', function (event) {
+                alert("这个事件触发,当用户完成画一个圆")
+
+                google.maps.event.addListener(event,"rightclick",function(){
+                    alert("右键事件")
+
+                });
+
+            });
+
+            //这个事件触发,当用户完成绘制一个矩形
+            google.maps.event.addListener(drawingManager, 'rectanglecomplete', function (event) {
+                alert("这个事件触发,当用户完成绘制一个矩形")
+
+                google.maps.event.addListener(event,"rightclick",function(){
+                    alert("右键事件")
+
+                });
+
+            });
+
+            //这个事件触发,当用户完成画一个多边形
+            google.maps.event.addListener(drawingManager, 'polygoncomplete', function (event) {
+                alert("这个事件触发,当用户完成画一个多边形")
+
+                google.maps.event.addListener(event,"rightclick",function(){
+                    alert("右键事件")
+
+                });
+
+            });
+
+
+            marker  = new google.maps.Marker({
+                position: myLatlng,
+                map: map,
+                title: 'fdfdf',
+            });
+            //点击标记
+            google.maps.event.addListener(marker, 'click', function() {
+
+                if (infowindow) {infowindow.close()};
+                infowindow.setContent('测试点击标记!!!!!!');//设置提示框内容
+                infowindow.open(map,marker);
+            });
+
+
+
+
+                google.maps.event.addListener(drawingManager, "click", function  (data) {
+                alert("rightclick1")
+
+
+        });
+
+}
+        function  selectColor(){
+
+           var color= $("#cololSelect").val();
+
+            if(color==1) {
+
+                style.strokeColor="#FF0000";
+                style.fillColor="#FFB5B5";
+            }
+            else
+            {
+
+                style.strokeColor="#468EF7";
+                style.fillColor="#13c2f7";
+
+              }
+
+
+        }
+    </script>
+</head>
+
+<body onload="initialize()">
+<div style="z-index: 100; left: 0;top: 0; position:absolute; background-color: aquamarine">
+    <select id="cololSelect" onchange="selectColor()">
+        <option value="1">红色</option>
+        <option value="2">蓝色</option>
+    </select>
+</div>
+<div id="map_canvas" style="left:0;top:0;width:100%;height:100%;position:absolute;">
+
+</div>
+<div style="z-index: 100; left: 0;bottom: 0; position:absolute; background-color: aquamarine">级别：<span id="zoom"></span>鼠标所在经纬度：<span id="lanlng"></span>中心坐标:<span id="centLanLng"></span></div>
+</body>
+
+</html>
+
+</script>
